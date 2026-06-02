@@ -1,0 +1,79 @@
+* {
+    border: none;
+    border-radius: 6px;
+    font-family: "MesloLGS Nerd Font", monospace;
+    font-size: 15px;
+    font-weight: 600;
+    min-height: 0;
+}
+
+/* Changed from transparent to a solid, very dark shade */
+window#waybar {
+    background-color: #08080c; 
+    color: #cdd6f4;
+    border-bottom: 2px solid #11111b; 
+}
+
+/* Modules Background and Padding */
+#workspaces,
+#mode,
+#clock,
+#tray,
+#cpu,
+#memory,
+#backlight,
+#pulseaudio,
+#network,
+#bluetooth,
+#battery,
+#custom-power {
+    background-color: #1e1e2e; /* Slightly lighter dark grey for the "pill" shapes */
+    padding: 0 12px;
+    margin: 4px 3px;
+    color: #cdd6f4; /* Standard clean white/grey text */
+}
+
+/* Hover Effects */
+#pulseaudio:hover,
+#network:hover,
+#bluetooth:hover,
+#custom-power:hover {
+    background-color: #313244;
+}
+
+/* Workspaces */
+#workspaces {
+    padding: 0;
+}
+
+#workspaces button {
+    padding: 0 12px;
+    color: #6c7086;
+    background: transparent;
+}
+
+#workspaces button.focused {
+    color: #cdd6f4; /* Clean white instead of purple */
+    font-weight: bold;
+    background-color: #313244;
+}
+
+/* Fixed Clock Color */
+#clock {
+    color: #cdd6f4; /* Crisp white for maximum readability */
+    font-weight: bold;
+}
+
+/* Alerts */
+#battery.warning { color: #f9e2af; }
+#battery.critical:not(.charging) { 
+    color: #f38ba8; 
+    background-color: #1e1e2e; 
+    border: 1px solid #f38ba8; 
+}
+#network.disconnected { color: #f38ba8; }
+#custom-power {
+    color: #f38ba8;
+    font-size: 20px;
+    padding: 0 15px 0 10px;
+}
