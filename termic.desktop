@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Termic
 Comment=AI Coding Agent Orchestrator
-Exec=sh -c "$HOME/Applications/Termic.AppImage
+Exec=/home/rick/Applications/Termic.AppImage
 Icon=utilities-terminal
 Terminal=false
 Type=Application
