@@ -1,0 +1,22 @@
+# Core CLI + terminal (every Arch machine)
+base-devel
+git
+github-cli
+zsh
+neovim
+vim
+luarocks
+tree-sitter-cli
+npm
+fzf
+fd
+ripgrep
+jq
+lazygit
+htop
+wget
+unzip
+zip
+kitty
+gnu-free-fonts
+ttf-meslo-nerd

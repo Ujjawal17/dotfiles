@@ -1,0 +1,197 @@
+# ==========================================
+# 1. VARIABLES
+# ==========================================
+set $mod Mod4
+set $left h
+set $down j
+set $up k
+set $right l
+
+# Preferred Applications
+set $term kitty
+set $browser firefox
+set $menu wofi --show drun --allow-images
+set $filemanager thunar
+
+# The Dark Contrast Lockscreen
+set $lock swaylock --screenshots --indicator --indicator-radius 90 --indicator-thickness 12 --effect-blur 20x10 --effect-greyscale --effect-vignette 0.8:0.8 --ring-color 313244 --line-color 45475a --inside-color 181825ee --key-hl-color 585b70 --text-color cdd6f4 --separator-color 00000000 --line-uses-ring
+
+# ==========================================
+# 2. APPEARANCE & OUTPUT
+# ==========================================
+font pango:FreeMono Bold 14
+output * bg ~/.config/backgrounds/daniel-leone-v7daTKlZzaw-unsplash.jpg fill
+
+# Clean, Minimalist Borders (No Titlebars)
+default_border pixel 2
+default_floating_border pixel 0
+smart_borders on
+
+# Window Spacing (Gaps)
+gaps inner 6
+gaps outer 2
+smart_gaps on
+
+# Border Colors
+# class                 border  bground text    indicator child_border
+client.focused          #89b4fa #11111b #ffffff #89b4fa   #89b4fa
+client.focused_inactive #313244 #11111b #808080 #313244   #313244
+client.unfocused        #1e1e2e #11111b #808080 #1e1e2e   #1e1e2e
+client.urgent           #f38ba8 #11111b #ffffff #f38ba8   #f38ba8
+
+# ==========================================
+# 3. AUTOSTART & SERVICES
+# ==========================================
+# Waybar Environment Setup
+exec_always "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP; pkill -SIGUSR2 -x waybar || waybar"
+
+# macOS-Style System Tray Applets
+# Notification daemon - without one, notify-send silently does nothing.
+exec mako
+# Battery warnings - upowerd only exposes state on D-Bus, it sends no popups.
+exec batsignal -w 25 -c 15 -d 5
+exec nm-applet --indicator
+exec blueman-applet
+
+# Idle daemon (Auto-lock and screen off)
+exec swayidle -w \
+    timeout 300 '$lock' \
+    timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
+    before-sleep '$lock'
+
+# ==========================================
+# 4. INPUT DEVICES (T490 Touchpad)
+# ==========================================
+input type:touchpad {
+    dwt enabled
+    tap enabled
+    natural_scroll enabled
+    middle_emulation enabled
+}
+
+# ==========================================
+# 5. CORE KEYBINDINGS
+# ==========================================
+bindsym $mod+Return exec $term
+bindsym $mod+w exec $browser
+bindsym $mod+Shift+f exec $filemanager
+bindsym $mod+space exec $menu
+bindsym $mod+Shift+q kill
+bindsym $mod+Escape exec $lock
+bindsym $mod+Shift+c reload
+bindsym Print exec grim
+bindsym $mod+Print exec grim -g "$(slurp)" - | wl-copy
+
+# Power & Session Management
+bindsym $mod+Shift+e exec swaynag -t warning -m 'Do you really want to exit sway? This will log you out.' -B 'Yes, exit' 'swaymsg exit'
+bindsym $mod+Shift+BackSpace exec systemctl poweroff
+bindsym $mod+Shift+r exec systemctl reboot
+
+# Track clipboard history in the background
+exec_always pkill clipman; wl-paste -t text --watch clipman store --max-items=500 --no-persist
+bindsym $mod+v exec clipman pick --tool=wofi --err-on-no-selection && wtype -M ctrl -M shift v || wtype -M ctrl v
+
+# ==========================================
+# 6. HARDWARE & MEDIA CONTROLS
+# ==========================================
+# Audio
+bindsym --locked XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
+bindsym --locked XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym --locked XF86AudioRaiseVolume exec pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym --locked XF86AudioMicMute exec pactl set-source-mute @DEFAULT_SOURCE@ toggle
+
+# Brightness
+bindsym --locked XF86MonBrightnessDown exec brightnessctl set 5%-
+bindsym --locked XF86MonBrightnessUp exec brightnessctl set 5%+
+
+# ==========================================
+# 7. WINDOW MANAGEMENT & WORKSPACES
+# ==========================================
+floating_modifier $mod normal
+
+# Movement
+bindsym $mod+$left focus left
+bindsym $mod+$down focus down
+bindsym $mod+$up focus up
+bindsym $mod+$right focus right
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+bindsym $mod+Shift+$left move left
+bindsym $mod+Shift+$down move down
+bindsym $mod+Shift+$up move up
+bindsym $mod+Shift+$right move right
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# Workspaces
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+bindsym $mod+0 workspace number 10
+
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+bindsym $mod+Shift+8 move container to workspace number 8
+bindsym $mod+Shift+9 move container to workspace number 9
+bindsym $mod+Shift+0 move container to workspace number 10
+
+# Layouts
+bindsym $mod+backslash splith
+bindsym $mod+Shift+backslash splitv
+bindsym $mod+s layout stacking
+bindsym $mod+t layout tabbed
+bindsym $mod+e layout toggle split
+bindsym $mod+f fullscreen
+bindsym $mod+Shift+d floating toggle
+bindsym $mod+d focus mode_toggle
+bindsym $mod+a focus parent
+
+# Scratchpad
+bindsym $mod+Shift+minus move scratchpad
+bindsym $mod+minus scratchpad show
+
+# Resize Mode
+mode "resize" {
+    bindsym $left resize shrink width 10px
+    bindsym $down resize grow height 10px
+    bindsym $up resize shrink height 10px
+    bindsym $right resize grow width 10px
+    bindsym Left resize shrink width 10px
+    bindsym Down resize grow height 10px
+    bindsym Up resize shrink height 10px
+    bindsym Right resize grow width 10px
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# Screen recording toggle (press again to stop). Mic starts muted (F4 toggles).
+bindsym $mod+Alt+r exec ~/.local/bin/screen-record toggle --area
+bindsym $mod+Shift+Print exec ~/.local/bin/screen-record toggle
+
+# ==========================================
+# 8. WINDOW RULES (The macOS Applet Fix)
+# ==========================================
+# Force tray/Waybar tools to float in the top right corner
+for_window [app_id="blueman-manager"] floating enable, resize set width 400 height 450, move position 1500 40
+for_window [app_id="pavucontrol"] floating enable, resize set width 400 height 500, move position 1500 40
+
+# Include external configs (leave this at the very end)
+include /etc/sway/config.d/*
+xwayland enable

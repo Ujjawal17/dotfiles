@@ -1,0 +1,20 @@
+# Core CLI + terminal for Debian/Ubuntu (best effort; names differ from Arch)
+# Note: Debian stable's neovim may be older than the 0.11 the config needs.
+git
+gh
+zsh
+neovim
+vim
+luarocks
+npm
+fzf
+fd-find
+ripgrep
+jq
+lazygit
+htop
+wget
+unzip
+zip
+kitty
+fonts-freefont-ttf

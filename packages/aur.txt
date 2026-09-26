@@ -1,0 +1,8 @@
+# AUR packages (installed with --desktop, via yay)
+clipman-git
+swaylock-effects-git
+google-chrome
+visual-studio-code-bin
+google-antigravity-bin
+openwhispr-bin
+nordvpn-bin

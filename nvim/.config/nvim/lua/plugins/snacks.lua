@@ -5,8 +5,18 @@ return {
   },
   priority = 1000,
   lazy = false,
+  init = function()
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "VeryLazy",
+      callback = function()
+        vim.ui.input = Snacks.input
+        vim.ui.select = Snacks.picker.select
+      end,
+    })
+  end,
   opts = {
     bigfile = { enabled = true },
+    image = { enabled = false },
     dashboard = {
       enabled = true,
       preset = {
@@ -28,6 +38,7 @@ return {
     picker = { enabled = true },
     notifier = { enabled = true },
     quickfile = { enabled = true },
+    explorer = { enabled = true },
     scroll = { enabled = false },
     statuscolumn = { enabled = true },
     words = { enabled = true },
@@ -35,7 +46,7 @@ return {
   keys = {
     { "<leader>sf",       function() Snacks.scratch() end,            desc = "Toggle Scratch Buffer" },
     { "<leader>S",        function() Snacks.scratch.select() end,     desc = "Select Scratch Buffer" },
-    { "<leader>gl",       function() Snacks.lazygit.log_file() end,   desc = "Lazygit Log (cwd)" },
+    { "<leader>gl",       function() Snacks.lazygit.log_file() end,   desc = "Lazygit Log (file)" },
     { "<leader>lg",       function() Snacks.lazygit() end,            desc = "Lazygit" },
     { "<C-p>",            function() Snacks.picker.pick("files") end, desc = "Find Files" },
     { "<leader><leader>", function() Snacks.picker.recent() end,      desc = "Recent Files" },

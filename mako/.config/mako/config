@@ -1,0 +1,29 @@
+# Notification popups for sway (catppuccin mocha).
+
+font=sans 11
+width=360
+height=110
+margin=10
+padding=14
+border-size=2
+border-radius=6
+default-timeout=5000
+anchor=top-right
+background-color=#1e1e2eee
+text-color=#cdd6f4
+border-color=#585b70
+
+[urgency=low]
+border-color=#45475a
+default-timeout=3000
+
+[urgency=critical]
+border-color=#f38ba8
+default-timeout=0
+
+[app-name="Screen recording"]
+border-color=#f38ba8
+default-timeout=4000
+
+[app-name="batsignal"]
+border-color=#f9e2af

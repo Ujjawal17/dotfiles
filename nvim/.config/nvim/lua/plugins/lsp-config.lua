@@ -1,48 +1,58 @@
+-- Language servers. Mason installs them; mason-lspconfig enables every
+-- installed server automatically (Neovim 0.11+ vim.lsp.enable API).
+local servers = {
+  "lua_ls",
+  "pyright",
+  "terraformls",
+  "rust_analyzer",
+  "bashls",
+  "yamlls",
+  "jsonls",
+}
+-- gopls is built with go, so only ask for it where go exists
+if vim.fn.executable("go") == 1 then
+  table.insert(servers, "gopls")
+end
+
 return {
   {
     "williamboman/mason.nvim",
     lazy = false,
-    config = function()
-      require("mason").setup()
-    end,
+    opts = {},
   },
   {
     "williamboman/mason-lspconfig.nvim",
     lazy = false,
+    dependencies = { "williamboman/mason.nvim", "neovim/nvim-lspconfig" },
     opts = {
-      auto_install = true,
+      ensure_installed = servers,
+      automatic_enable = true,
     },
   },
   {
     "neovim/nvim-lspconfig",
     lazy = false,
     config = function()
-      local cmp_nvim_lsp = require("cmp_nvim_lsp")
-      local capabilities = vim.tbl_deep_extend(
-        "force",
-        {},
-        vim.lsp.protocol.make_client_capabilities(),
-        cmp_nvim_lsp.default_capabilities()
-      )
-
-      local lspconfig = require("lspconfig")
-
-      lspconfig.tailwindcss.setup({
-        capabilities = capabilities
-      })
-      lspconfig.ruby_lsp.setup({
-        capabilities = capabilities,
-      })
-      lspconfig.lua_ls.setup({
-        capabilities = capabilities
+      -- Advertise nvim-cmp completion capabilities to every server
+      vim.lsp.config("*", {
+        capabilities = require("cmp_nvim_lsp").default_capabilities(),
       })
 
-      vim.keymap.set("n", "K", vim.lsp.buf.hover, {})
-      vim.keymap.set("n", "<leader>gd", vim.lsp.buf.definition, {})
-      vim.keymap.set("n", "<leader>gr", vim.lsp.buf.references, {})
-      vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, {})
-      vim.keymap.set("n", "<leader>gf", vim.lsp.buf.format, {})
-      vim.keymap.set('n', '<space>rn', vim.lsp.buf.rename, {})
+      vim.lsp.config("lua_ls", {
+        settings = { Lua = { diagnostics = { globals = { "vim", "Snacks" } } } },
+      })
+
+      -- clangd comes with the system clang package (or Xcode on macOS), not Mason
+      if vim.fn.executable("clangd") == 1 then
+        vim.lsp.enable("clangd")
+      end
+
+      vim.keymap.set("n", "K", vim.lsp.buf.hover, { desc = "Hover" })
+      vim.keymap.set("n", "<leader>gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+      vim.keymap.set("n", "<leader>gr", vim.lsp.buf.references, { desc = "References" })
+      vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code action" })
+      vim.keymap.set("n", "<leader>gf", vim.lsp.buf.format, { desc = "Format" })
+      vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename" })
     end,
   },
 }

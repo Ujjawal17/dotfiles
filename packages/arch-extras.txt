@@ -1,0 +1,11 @@
+# Dev / thesis / cloud tooling (installed with --extras)
+go
+clang
+valgrind
+docker
+terraform
+aws-cli-v2
+jupyterlab
+python-ipykernel
+tectonic
+ollama

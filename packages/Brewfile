@@ -1,0 +1,23 @@
+# macOS: brew bundle --file=packages/Brewfile
+brew "git"
+brew "gh"
+brew "neovim"
+brew "luarocks"
+brew "tree-sitter-cli"
+brew "node"
+brew "fzf"
+brew "fd"
+brew "ripgrep"
+brew "jq"
+brew "lazygit"
+brew "htop"
+brew "wget"
+
+cask "kitty"
+cask "font-freefont"
+cask "font-meslo-lg-nerd-font"
+
+# Apps (comment out what you don't want)
+cask "google-chrome"
+cask "visual-studio-code"
+cask "antigravity"

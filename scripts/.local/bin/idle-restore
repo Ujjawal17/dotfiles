@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Restart swayidle with the same settings as ~/.config/sway/config.
+# Use after `pkill swayidle` (e.g. during a screen recording, where
+# `output * power off` would blank the capture).
+pgrep -x swayidle >/dev/null && { echo "swayidle already running"; exit 0; }
+
+LOCK='swaylock --screenshots --indicator --indicator-radius 90 --indicator-thickness 12 --effect-blur 20x10 --effect-greyscale --effect-vignette 0.8:0.8 --ring-color 313244 --line-color 45475a --inside-color 181825ee --key-hl-color 585b70 --text-color cdd6f4 --separator-color 00000000 --line-uses-ring'
+
+setsid swayidle -w \
+  timeout 300 "$LOCK" \
+  timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
+  before-sleep "$LOCK" >/dev/null 2>&1 &
+
+sleep 1
+pgrep -x swayidle >/dev/null && echo "swayidle restored" || echo "FAILED to restart swayidle"

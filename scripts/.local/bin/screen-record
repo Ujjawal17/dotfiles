@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+# Screen recording for Sway / wlroots via wf-recorder. Writes to ~/Videos.
+#
+#   screen-record start [--mic] [--area]   begin recording (backgrounded, mic muted)
+#   screen-record stop                     finalise the file cleanly
+#   screen-record toggle [--area]          start if idle, stop if running (keybind)
+#   screen-record status                   show state, elapsed, size
+#   screen-record waybar                   JSON for the waybar custom/recording module
+#   screen-record mp4 <file.mkv>           remux to .mp4 for upload
+#
+# --area records a region picked with slurp instead of the whole output.
+#
+# An audio track is ALWAYS recorded, but the mic starts muted. Toggle it live
+# with the ThinkPad mic key (F4) at any point during the session. The track
+# cannot be added later - wf-recorder binds its audio source at start - so it
+# is always present and F4 decides whether it captures anything.
+#
+# Records to MKV: if the machine dies mid-session the file is still playable,
+# which an MP4 would not be. Remux to MP4 at the end for upload.
+
+set -euo pipefail
+
+OUT_DIR="${REC_DIR:-$HOME/Videos}"
+# Runtime state stays out of ~/Videos so that folder holds only videos.
+STATE_DIR="${XDG_RUNTIME_DIR:-/tmp}/wf-record"
+PIDFILE="$STATE_DIR/pid"
+CURRENT="$STATE_DIR/current"
+LOG="$STATE_DIR/log"
+
+OUTPUT="${WF_OUTPUT:-eDP-1}"
+RENDER_NODE="${WF_RENDER_NODE:-/dev/dri/renderD128}"
+MIC_SOURCE="${WF_MIC:-alsa_input.pci-0000_00_1f.3.analog-stereo}"
+QP="${WF_QP:-26}"
+
+mkdir -p "$OUT_DIR" "$STATE_DIR"
+
+die() { echo "error: $*" >&2; exit 1; }
+
+refresh_bar() { pkill -RTMIN+8 waybar 2>/dev/null || true; }
+
+elapsed() {
+  [[ -f $PIDFILE ]] || { echo "00:00"; return; }
+  local secs; secs=$(ps -o etimes= -p "$(cat "$PIDFILE")" 2>/dev/null | tr -d ' ')
+  [[ -n $secs ]] || { echo "00:00"; return; }
+  printf '%02d:%02d:%02d' $((secs/3600)) $((secs%3600/60)) $((secs%60))
+}
+
+# Waybar polls this once a second and on SIGRTMIN+8. Empty text = module hidden.
+cmd_waybar() {
+  if running; then
+    local mic; mic="$(mic_state)"
+    printf '{"text":"● REC %s","class":"recording","tooltip":"Recording %s\\nMic: %s\\n%s\\nClick to stop"}\n' \
+      "$(elapsed)" "$(elapsed)" "$mic" "$(cat "$CURRENT" 2>/dev/null)"
+  else
+    local stray; stray="$(stray_pids | paste -sd' ')"
+    if [[ -n $stray ]]; then
+      printf '{"text":"● REC (untracked)","class":"stray","tooltip":"Untracked wf-recorder: pid %s"}\n' "$stray"
+    else
+      printf '{"text":"","class":"idle","tooltip":""}\n'
+    fi
+  fi
+}
+
+mic_state() {
+  case "$(pactl get-source-mute "$MIC_SOURCE" 2>/dev/null)" in
+    *yes) echo "MUTED" ;;
+    *no)  echo "LIVE" ;;
+    *)    echo "unknown" ;;
+  esac
+}
+
+running() {
+  [[ -f $PIDFILE ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null
+}
+
+# Any wf-recorder NOT the one we track - e.g. started by another script, or by
+# us before the state dir moved. Two recorders on one output silently produce
+# two files and a confusing mic state, so starting a third is always refused.
+stray_pids() {
+  local tracked="" pid
+  [[ -f $PIDFILE ]] && tracked="$(cat "$PIDFILE")"
+  for pid in $(pgrep -x wf-recorder 2>/dev/null); do
+    [[ $pid != "$tracked" ]] && echo "$pid"
+  done
+}
+
+cmd_start() {
+  local start_muted=1 area=0
+  for opt in "$@"; do
+    case "$opt" in
+      --no-audio) ;;
+      --mic)      start_muted=0 ;;   # begin with the mic already live
+      --area)     area=1 ;;
+      *) die "unknown option: $opt" ;;
+    esac
+  done
+  # The track is always captured; muting the source is what silences it.
+  local audio=(--audio="$MIC_SOURCE")
+
+  running && die "already recording -> $(cat "$CURRENT")"
+  command -v wf-recorder >/dev/null || die "wf-recorder is not installed"
+
+  local stray; stray="$(stray_pids | paste -sd' ')"
+  if [[ -n $stray ]]; then
+    die "an untracked wf-recorder is already running (pid $stray).
+       stop it with:  kill -INT $stray
+       it was not started by screen-record."
+  fi
+
+  local target=(-o "$OUTPUT")
+  if [[ $area -eq 1 ]]; then
+    command -v slurp >/dev/null || die "slurp is not installed"
+    local geometry; geometry="$(slurp)" || exit 0   # selection cancelled
+    target=(-g "$geometry")
+  fi
+
+  local file="$OUT_DIR/recording_$(date +%Y-%m-%d_%H-%M-%S).mkv"
+
+  # Hardware H.264 via Intel VAAPI: near-zero CPU cost on long recordings.
+  local args=(-f "$file" "${target[@]}" -c h264_vaapi -d "$RENDER_NODE" -p qp="$QP")
+  if [[ ! -e $RENDER_NODE ]]; then
+    echo "warn: $RENDER_NODE missing, falling back to software x264" >&2
+    args=(-f "$file" "${target[@]}" -c libx264 -p crf=26 -p preset=veryfast)
+  fi
+
+  if [[ $start_muted -eq 1 ]]; then
+    pactl set-source-mute "$MIC_SOURCE" 1 2>/dev/null || true
+  else
+    pactl set-source-mute "$MIC_SOURCE" 0 2>/dev/null || true
+  fi
+
+  wf-recorder "${args[@]}" "${audio[@]}" >"$LOG" 2>&1 &
+  echo $! > "$PIDFILE"
+  echo "$file" > "$CURRENT"
+
+  sleep 2
+  running || { echo "--- wf-recorder log ---"; cat "$LOG"; die "recorder exited immediately"; }
+  echo "recording -> $file  (pid $(cat "$PIDFILE"))"
+  echo "mic        $(mic_state)  (F4 toggles it mid-recording)"
+  refresh_bar
+  notify-send -a "Screen recording" -u normal \
+    "Recording started" "Mic $(mic_state) - F4 toggles.\nPress the same key again to stop." 2>/dev/null || true
+}
+
+cmd_stop() {
+  running || die "not recording"
+  local pid file
+  pid="$(cat "$PIDFILE")"
+  file="$(cat "$CURRENT")"
+
+  # SIGINT, not SIGKILL: wf-recorder must flush and write the MKV index.
+  kill -INT "$pid"
+  for _ in $(seq 1 30); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
+  kill -0 "$pid" 2>/dev/null && die "recorder did not exit; file may be damaged"
+
+  rm -f "$PIDFILE" "$CURRENT"
+  refresh_bar
+  notify-send -a "Screen recording" -u normal \
+    "Recording stopped" "Saved $(basename "$file") ($(du -h "$file" | cut -f1))" 2>/dev/null || true
+  echo "saved $file ($(du -h "$file" | cut -f1))"
+  echo "upload-ready mp4: screen-record mp4 '$file'"
+}
+
+cmd_status() {
+  if running; then
+    local file; file="$(cat "$CURRENT")"
+    echo "RECORDING  pid $(cat "$PIDFILE")  elapsed $(ps -o etime= -p "$(cat "$PIDFILE")" | tr -d ' ')"
+    echo "file       $file ($(du -h "$file" | cut -f1))"
+    echo "mic        $(mic_state)"
+  else
+    local stray; stray="$(stray_pids | paste -sd' ')"
+    [[ -n $stray ]] && echo "WARNING: untracked wf-recorder running (pid $stray)"
+    echo "idle"
+    ls -lht "$OUT_DIR"/recording_*.mkv 2>/dev/null | head -5 || echo "no recordings yet"
+  fi
+}
+
+cmd_mp4() {
+  local src="${1:-}"
+  [[ -f $src ]] || die "usage: screen-record mp4 <file.mkv>"
+  local dst="${src%.mkv}.mp4"
+  # Stream copy: no re-encode, so this is fast and lossless.
+  ffmpeg -nostdin -loglevel warning -i "$src" -c copy -movflags +faststart "$dst"
+  echo "wrote $dst ($(du -h "$dst" | cut -f1))"
+}
+
+# Bound to a Sway key: one press starts, the next stops. Feedback goes to
+# notify-send because a keybinding has no terminal to print to.
+cmd_toggle() {
+  if running; then cmd_stop; else cmd_start --no-audio "$@"; fi
+}
+
+case "${1:-}" in
+  start)  shift; cmd_start "$@" ;;
+  toggle) shift; cmd_toggle "$@" ;;
+  stop)   cmd_stop ;;
+  status) cmd_status ;;
+  waybar) cmd_waybar ;;
+  mp4)    shift; cmd_mp4 "$@" ;;
+  *) sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \?//'; exit 1 ;;
+esac
